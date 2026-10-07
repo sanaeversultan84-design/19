@@ -1,0 +1,1671 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartTest — Интерактивті тест</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'Segoe UI', 'Arial', 'sans-serif']
+          },
+          animation: {
+            'float': 'float 4s ease-in-out infinite',
+            'pulse-soft': 'pulseSoft 2s infinite'
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-8px)' }
+            },
+            pulseSoft: {
+              '0%, 100%': { opacity: '1' },
+              '50%': { opacity: '.65' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      background:
+        radial-gradient(circle at 10% 10%, rgba(99,102,241,.18), transparent 25%),
+        radial-gradient(circle at 90% 20%, rgba(168,85,247,.16), transparent 25%),
+        radial-gradient(circle at 50% 100%, rgba(14,165,233,.12), transparent 30%),
+        #f5f7ff;
+      min-height: 100vh;
+    }
+
+    .glass {
+      background: rgba(255,255,255,.82);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(255,255,255,.8);
+    }
+
+    .gradient-text {
+      background: linear-gradient(90deg,#4f46e5,#9333ea,#0891b2);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .answer-card {
+      transition: all .2s ease;
+    }
+
+    .answer-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(79,70,229,.10);
+    }
+
+    .answer-card.selected {
+      border-color: #6366f1;
+      background: #eef2ff;
+      box-shadow: 0 8px 25px rgba(79,70,229,.12);
+    }
+
+    .answer-card.correct {
+      border-color: #10b981;
+      background: #ecfdf5;
+    }
+
+    .answer-card.incorrect {
+      border-color: #ef4444;
+      background: #fef2f2;
+    }
+
+    .timer-warning {
+      color: #dc2626;
+      animation: pulseSoft 1s infinite;
+    }
+
+    .modal-bg {
+      background: rgba(15,23,42,.65);
+      backdrop-filter: blur(7px);
+    }
+
+    .progress-bar {
+      transition: width .35s ease;
+    }
+
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+
+<body class="text-slate-800">
+
+<!-- =========================================================
+     Бастапқы модальді терезе
+========================================================= -->
+<div id="studentModal"
+     class="fixed inset-0 z-50 modal-bg flex items-center justify-center p-4">
+
+  <div class="glass w-full max-w-lg rounded-3xl shadow-2xl p-7 md:p-9">
+
+    <div class="text-center mb-7">
+      <div class="w-20 h-20 mx-auto rounded-3xl
+                  bg-gradient-to-br from-indigo-500 via-purple-500 to-cyan-500
+                  flex items-center justify-center text-white text-4xl shadow-xl
+                  animate-float">
+        🎓
+      </div>
+
+      <h1 class="text-3xl md:text-4xl font-black mt-5 gradient-text">
+        SmartTest
+      </h1>
+
+      <p class="text-slate-500 mt-2">
+        Білімді тексерудің заманауи тәсілі
+      </p>
+    </div>
+
+    <div class="space-y-5">
+
+      <div>
+        <label class="block font-bold text-sm mb-2">
+          👤 Оқушының аты-жөні
+        </label>
+
+        <input
+          id="studentName"
+          type="text"
+          placeholder="Мысалы: Айдос Ермеков"
+          class="w-full px-4 py-3.5 rounded-2xl border border-slate-200
+                 focus:outline-none focus:ring-4 focus:ring-indigo-100
+                 focus:border-indigo-500 transition"
+        />
+      </div>
+
+      <div>
+        <label class="block font-bold text-sm mb-2">
+          🏫 Сыныбы
+        </label>
+
+        <select
+          id="studentClass"
+          class="w-full px-4 py-3.5 rounded-2xl border border-slate-200
+                 focus:outline-none focus:ring-4 focus:ring-indigo-100
+                 focus:border-indigo-500 transition bg-white">
+          <option value="">Сыныпты таңдаңыз</option>
+          <option>5 сынып</option>
+          <option>6 сынып</option>
+          <option>7 сынып</option>
+          <option>8 сынып</option>
+          <option>9 сынып</option>
+          <option>10 сынып</option>
+          <option>11 сынып</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-bold text-sm mb-2">
+          📚 Пән
+        </label>
+
+        <select
+          id="subjectSelect"
+          class="w-full px-4 py-3.5 rounded-2xl border border-slate-200
+                 focus:outline-none focus:ring-4 focus:ring-indigo-100
+                 focus:border-indigo-500 transition bg-white">
+
+          <option value="">Пәнді таңдаңыз</option>
+          <option value="Математика">Математика</option>
+          <option value="Қазақстан тарихы">Қазақстан тарихы</option>
+          <option value="Физика">Физика</option>
+          <option value="Информатика">Информатика</option>
+        </select>
+      </div>
+
+      <div id="formError"
+           class="hidden rounded-2xl bg-red-50 text-red-600
+                  px-4 py-3 text-sm font-semibold">
+        ⚠️ Барлық жолақты толтырыңыз!
+      </div>
+
+      <button
+        onclick="startTest()"
+        class="w-full py-4 rounded-2xl text-white font-black text-lg
+               bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-500
+               hover:scale-[1.01] active:scale-[.99]
+               shadow-xl shadow-indigo-200 transition">
+
+        Тестті бастау 🚀
+      </button>
+
+    </div>
+
+    <div class="text-center mt-6 text-xs text-slate-400">
+      Әр тестте 10 сұрақ · 20 минут
+    </div>
+
+  </div>
+</div>
+
+
+<!-- =========================================================
+     Негізгі қосымша
+========================================================= -->
+<main id="app" class="hidden">
+
+  <!-- HEADER -->
+  <header class="sticky top-0 z-40 glass shadow-sm no-print">
+
+    <div class="max-w-6xl mx-auto px-4 py-4">
+
+      <div class="flex flex-wrap items-center justify-between gap-4">
+
+        <div>
+          <h1 class="text-2xl font-black gradient-text">
+            SmartTest
+          </h1>
+
+          <p id="headerSubject"
+             class="text-xs text-slate-500">
+            Интерактивті тест
+          </p>
+        </div>
+
+        <div class="flex items-center gap-3">
+
+          <div class="hidden sm:block text-right">
+            <div id="headerStudent"
+                 class="font-bold text-sm">
+            </div>
+
+            <div id="headerClass"
+                 class="text-xs text-slate-500">
+            </div>
+          </div>
+
+          <!-- TIMER -->
+          <div id="timerBox"
+               class="flex items-center gap-2 px-4 py-2 rounded-2xl
+                      bg-indigo-50 text-indigo-700 font-black">
+
+            <span class="text-xl">⏱️</span>
+            <span id="timer">20:00</span>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </header>
+
+
+  <!-- CONTENT -->
+  <section class="max-w-5xl mx-auto px-4 py-8">
+
+    <!-- TEST INFO -->
+    <div class="grid md:grid-cols-3 gap-4 mb-6 no-print">
+
+      <div class="glass rounded-2xl p-5">
+        <div class="text-sm text-slate-500">
+          Пән
+        </div>
+        <div id="infoSubject"
+             class="font-black text-lg mt-1">
+        </div>
+      </div>
+
+      <div class="glass rounded-2xl p-5">
+        <div class="text-sm text-slate-500">
+          Сұрақ
+        </div>
+        <div class="font-black text-lg mt-1">
+          <span id="currentQuestionNumber">1</span>
+          /
+          <span id="totalQuestions">10</span>
+        </div>
+      </div>
+
+      <div class="glass rounded-2xl p-5">
+        <div class="text-sm text-slate-500">
+          Жауап берілді
+        </div>
+        <div class="font-black text-lg mt-1">
+          <span id="answeredCount">0</span>
+          /
+          <span id="answeredTotal">10</span>
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- PROGRESS -->
+    <div class="glass rounded-2xl p-3 mb-6 no-print">
+
+      <div class="flex justify-between text-xs font-bold mb-2">
+        <span>Тест барысы</span>
+        <span id="progressPercent">0%</span>
+      </div>
+
+      <div class="h-3 bg-slate-100 rounded-full overflow-hidden">
+
+        <div id="progressBar"
+             class="progress-bar h-full rounded-full
+                    bg-gradient-to-r from-indigo-500
+                    via-purple-500 to-cyan-500"
+             style="width:0%">
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- QUESTION -->
+    <div id="quizCard"
+         class="glass rounded-3xl shadow-xl p-6 md:p-10">
+
+      <div class="flex items-center justify-between mb-5">
+
+        <span id="questionBadge"
+              class="px-4 py-2 rounded-full
+                     bg-indigo-50 text-indigo-600
+                     font-black text-sm">
+          1-сұрақ
+        </span>
+
+        <span class="text-sm text-slate-400">
+          1 балл
+        </span>
+
+      </div>
+
+      <h2 id="questionText"
+          class="text-xl md:text-2xl font-black leading-relaxed mb-7">
+      </h2>
+
+      <div id="answers"
+           class="grid gap-4">
+      </div>
+
+
+      <!-- NAVIGATION -->
+      <div class="flex flex-col sm:flex-row
+                  justify-between gap-3 mt-9 no-print">
+
+        <button
+          id="prevBtn"
+          onclick="previousQuestion()"
+          class="px-6 py-3.5 rounded-2xl
+                 bg-slate-100 text-slate-700
+                 font-black hover:bg-slate-200
+                 disabled:opacity-40 disabled:cursor-not-allowed">
+
+          ← Артқа
+        </button>
+
+        <button
+          id="nextBtn"
+          onclick="nextQuestion()"
+          class="px-7 py-3.5 rounded-2xl
+                 bg-gradient-to-r from-indigo-600 to-purple-600
+                 text-white font-black shadow-lg
+                 hover:shadow-xl transition">
+
+          Алға →
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <!-- QUESTION MAP -->
+    <div class="glass rounded-3xl p-5 mt-6 no-print">
+
+      <h3 class="font-black mb-4">
+        Сұрақтар
+      </h3>
+
+      <div id="questionMap"
+           class="grid grid-cols-5 sm:grid-cols-10 gap-2">
+      </div>
+
+    </div>
+
+  </section>
+
+</main>
+
+
+<!-- =========================================================
+     RESULT
+========================================================= -->
+<section id="resultScreen"
+         class="hidden min-h-screen px-4 py-10">
+
+  <div class="max-w-3xl mx-auto">
+
+    <div class="glass rounded-[2rem] shadow-2xl p-7 md:p-10 text-center">
+
+      <div id="resultEmoji"
+           class="text-7xl mb-5">
+        🎉
+      </div>
+
+      <h1 class="text-3xl md:text-5xl font-black gradient-text">
+        Тест аяқталды!
+      </h1>
+
+      <p id="resultStudent"
+         class="text-slate-500 mt-3">
+      </p>
+
+
+      <!-- SCORE -->
+      <div class="my-9">
+
+        <div class="text-sm text-slate-500 font-bold">
+          Сіздің нәтижеңіз
+        </div>
+
+        <div id="resultScore"
+             class="text-6xl font-black gradient-text mt-2">
+          0 / 10
+        </div>
+
+        <div id="resultPercentage"
+             class="text-2xl font-black text-indigo-600 mt-3">
+          0%
+        </div>
+
+      </div>
+
+
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-left">
+
+        <div class="rounded-2xl bg-emerald-50 p-5">
+          <div class="text-2xl">✅</div>
+          <div class="text-sm text-slate-500 mt-2">
+            Дұрыс
+          </div>
+          <div id="correctAnswers"
+               class="font-black text-2xl text-emerald-600">
+            0
+          </div>
+        </div>
+
+        <div class="rounded-2xl bg-red-50 p-5">
+          <div class="text-2xl">❌</div>
+          <div class="text-sm text-slate-500 mt-2">
+            Қате
+          </div>
+          <div id="wrongAnswers"
+               class="font-black text-2xl text-red-600">
+            0
+          </div>
+        </div>
+
+        <div class="rounded-2xl bg-indigo-50 p-5 col-span-2 md:col-span-1">
+          <div class="text-2xl">📊</div>
+          <div class="text-sm text-slate-500 mt-2">
+            Пайыз
+          </div>
+          <div id="resultPercent2"
+               class="font-black text-2xl text-indigo-600">
+            0%
+          </div>
+        </div>
+
+      </div>
+
+
+      <!-- GOOGLE STATUS -->
+      <div id="sendStatus"
+           class="mt-7 rounded-2xl p-4 bg-slate-50 text-slate-500">
+        📡 Нәтиже жіберілуде...
+      </div>
+
+
+      <!-- BUTTONS -->
+      <div class="flex flex-col sm:flex-row gap-3 mt-7 no-print">
+
+        <button
+          onclick="location.reload()"
+          class="flex-1 py-4 rounded-2xl
+                 bg-slate-100 font-black
+                 hover:bg-slate-200">
+
+          🔄 Қайта бастау
+        </button>
+
+        <button
+          onclick="window.print()"
+          class="flex-1 py-4 rounded-2xl
+                 bg-gradient-to-r from-indigo-600 to-purple-600
+                 text-white font-black">
+
+          🖨️ Нәтижені басып шығару
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<script>
+
+/* =========================================================
+   GOOGLE APPS SCRIPT WEB APP URL
+   ---------------------------------------------------------
+   ОСЫ ЖЕРГЕ ӨЗ URL-ІҢІЗДІ ҚОЙЫҢЫЗ
+========================================================= */
+
+const GOOGLE_SCRIPT_URL =
+  "СІЗДІҢ_1_ҚАДАМДА_АЛҒАН_WEB_APP_URL_СІЛТЕМЕҢІЗ";
+
+
+/* =========================================================
+   ТЕСТ УАҚЫТЫ
+========================================================= */
+
+const TEST_TIME = 20 * 60;
+
+
+/* =========================================================
+   СҰРАҚТАР
+   Әр пәнге 10 сұрақтан мысал
+========================================================= */
+
+const questionBank = {
+
+  "Математика": [
+
+    {
+      question: "12 + 8 × 2 өрнегінің мәні неге тең?",
+      answers: ["40", "28", "32", "24"],
+      correct: 1
+    },
+
+    {
+      question: "25 санының квадрат түбірі нешеге тең?",
+      answers: ["4", "5", "6", "10"],
+      correct: 1
+    },
+
+    {
+      question: "1/2 + 1/4 неге тең?",
+      answers: ["2/6", "3/4", "1/6", "1"],
+      correct: 1
+    },
+
+    {
+      question: "Тік төртбұрыштың ұзындығы 8 см, ені 5 см. Ауданы қанша?",
+      answers: ["13 см²", "26 см²", "40 см²", "80 см²"],
+      correct: 2
+    },
+
+    {
+      question: "100 санының 20%-ы қанша?",
+      answers: ["10", "20", "25", "50"],
+      correct: 1
+    },
+
+    {
+      question: "3x = 18 теңдеуінің шешімі:",
+      answers: ["3", "6", "9", "15"],
+      correct: 1
+    },
+
+    {
+      question: "7² мәні:",
+      answers: ["14", "21", "49", "77"],
+      correct: 2
+    },
+
+    {
+      question: "Бір сағатта неше минут бар?",
+      answers: ["30", "50", "60", "100"],
+      correct: 2
+    },
+
+    {
+      question: "0,5 ондық бөлшегін бөлшек түрінде көрсетіңіз.",
+      answers: ["1/2", "1/5", "5/10", "2/5"],
+      correct: 0
+    },
+
+    {
+      question: "Үшбұрыш бұрыштарының қосындысы:",
+      answers: ["90°", "180°", "270°", "360°"],
+      correct: 1
+    }
+
+  ],
+
+
+  "Қазақстан тарихы": [
+
+    {
+      question: "Қазақстан Республикасының астанасы қай қала?",
+      answers: ["Алматы", "Шымкент", "Астана", "Тараз"],
+      correct: 2
+    },
+
+    {
+      question: "Қазақстан тәуелсіздігін қай жылы жариялады?",
+      answers: ["1986", "1990", "1991", "1995"],
+      correct: 2
+    },
+
+    {
+      question: "Қазақ хандығы қай жылы құрылды?",
+      answers: ["1456", "1465", "1500", "1511"],
+      correct: 1
+    },
+
+    {
+      question: "Қазақ хандығының негізін қалаған хандар:",
+      answers: [
+        "Абылай мен Кенесары",
+        "Керей мен Жәнібек",
+        "Тәуке мен Қасым",
+        "Есім мен Абылай"
+      ],
+      correct: 1
+    },
+
+    {
+      question: "Қазақстан Республикасының Конституциясы қашан қабылданды?",
+      answers: ["1991", "1993", "1995", "2000"],
+      correct: 2
+    },
+
+    {
+      question: "Алаш қозғалысының белгілі көшбасшысы кім?",
+      answers: [
+        "Әлихан Бөкейхан",
+        "Абылай хан",
+        "Қабанбай батыр",
+        "Кенесары хан"
+      ],
+      correct: 0
+    },
+
+    {
+      question: "Ұлы Жібек жолы негізінен нені байланыстырды?",
+      answers: [
+        "Еуропа мен Азияны",
+        "Африка мен Американы",
+        "Австралия мен Азияны",
+        "Антарктиданы"
+      ],
+      correct: 0
+    },
+
+    {
+      question: "Қазақтың ұлы ғалымы Шоқан Уәлихановтың мамандығы:",
+      answers: [
+        "Суретші",
+        "Ғалым және этнограф",
+        "Әнші",
+        "Сәулетші"
+      ],
+      correct: 1
+    },
+
+    {
+      question: "Абылай хан қай ғасырда өмір сүрді?",
+      answers: ["XV ғасыр", "XVI ғасыр", "XVII–XVIII ғасырлар", "XX ғасыр"],
+      correct: 2
+    },
+
+    {
+      question: "Қазақстанның мемлекеттік рәміздеріне не жатады?",
+      answers: [
+        "Ту, Елтаңба, Әнұран",
+        "Тек Ту",
+        "Ту және карта",
+        "Ән және елтаңба ғана"
+      ],
+      correct: 0
+    }
+
+  ],
+
+
+  "Физика": [
+
+    {
+      question: "Күштің өлшем бірлігі:",
+      answers: ["Джоуль", "Ньютон", "Ватт", "Паскаль"],
+      correct: 1
+    },
+
+    {
+      question: "Жылдамдықтың өлшем бірлігі:",
+      answers: ["м/с", "кг", "Н", "Дж"],
+      correct: 0
+    },
+
+    {
+      question: "Дененің массасын өлшейтін құрал:",
+      answers: ["Сызғыш", "Таразы", "Секундомер", "Термометр"],
+      correct: 1
+    },
+
+    {
+      question: "Температураны өлшейтін құрал:",
+      answers: ["Термометр", "Динамометр", "Таразы", "Амперметр"],
+      correct: 0
+    },
+
+    {
+      question: "Энергияның өлшем бірлігі:",
+      answers: ["Ньютон", "Ватт", "Джоуль", "Паскаль"],
+      correct: 2
+    },
+
+    {
+      question: "Электр тогының өлшем бірлігі:",
+      answers: ["Ампер", "Вольт", "Ом", "Ватт"],
+      correct: 0
+    },
+
+    {
+      question: "Жарықтың вакуумдағы жылдамдығы шамамен:",
+      answers: [
+        "300 000 км/с",
+        "3 000 км/с",
+        "30 000 км/с",
+        "300 км/с"
+      ],
+      correct: 0
+    },
+
+    {
+      question: "Ауырлық күші қай бағытта әсер етеді?",
+      answers: [
+        "Жоғары",
+        "Жердің орталығына қарай",
+        "Көлденең",
+        "Әсер етпейді"
+      ],
+      correct: 1
+    },
+
+    {
+      question: "Қуаттың өлшем бірлігі:",
+      answers: ["Ватт", "Ньютон", "Джоуль", "Килограмм"],
+      correct: 0
+    },
+
+    {
+      question: "Тығыздықтың формуласы:",
+      answers: [
+        "ρ = m/V",
+        "ρ = V/m",
+        "ρ = m×V",
+        "ρ = F/m"
+      ],
+      correct: 0
+    }
+
+  ],
+
+
+  "Информатика": [
+
+    {
+      question: "Компьютердің негізгі есептеу құрылғысы:",
+      answers: [
+        "Монитор",
+        "Пернетақта",
+        "Процессор",
+        "Принтер"
+      ],
+      correct: 2
+    },
+
+    {
+      question: "Ақпаратты ұзақ уақыт сақтауға арналған құрылғы:",
+      answers: [
+        "RAM",
+        "SSD/HDD",
+        "Процессор",
+        "Монитор"
+      ],
+      correct: 1
+    },
+
+    {
+      question: "HTML не үшін қолданылады?",
+      answers: [
+        "Веб-бет құрылымын жасауға",
+        "Компьютерді жөндеуге",
+        "Сурет салуға ғана",
+        "Музыка жазуға"
+      ],
+      correct: 0
+    },
+
+    {
+      question: "Ақпараттың ең кіші өлшем бірлігі:",
+      answers: ["Байт", "Бит", "Килобайт", "Мегабайт"],
+      correct: 1
+    },
+
+    {
+      question: "Python дегеніміз не?",
+      answers: [
+        "Операциялық жүйе",
+        "Бағдарламалау тілі",
+        "Компьютер құрылғысы",
+        "Антивирус"
+      ],
+      correct: 1
+    },
+
+    {
+      question: "Интернеттегі жеке құпиясөзді қалай сақтау керек?",
+      answers: [
+        "Барлығына айту",
+        "Әлеуметтік желіге жариялау",
+        "Құпия сақтау",
+        "Досқа беру"
+      ],
+      correct: 2
+    },
+
+    {
+      question: "RAM қандай жад?",
+      answers: [
+        "Жедел жад",
+        "Тұрақты жад",
+        "Сыртқы жад",
+        "Оптикалық диск"
+      ],
+      correct: 0
+    },
+
+    {
+      question: "Киберқауіпсіздік дегеніміз:",
+      answers: [
+        "Компьютер ойындары",
+        "Ақпарат пен жүйелерді қауіптен қорғау",
+        "Сурет салу",
+        "Мәтін теру"
+      ],
+      correct: 1
+    },
+
+    {
+      question: "Файл кеңейтілімі .jpg көбінесе нені білдіреді?",
+      answers: [
+        "Мәтін",
+        "Музыка",
+        "Сурет",
+        "Бағдарлама"
+      ],
+      correct: 2
+    },
+
+    {
+      question: "Операциялық жүйеге мысал:",
+      answers: [
+        "Windows",
+        "Google",
+        "YouTube",
+        "HTML"
+      ],
+      correct: 0
+    }
+
+  ]
+
+};
+
+
+/* =========================================================
+   GLOBAL VARIABLES
+========================================================= */
+
+let studentName = "";
+let studentClass = "";
+let subjectTitle = "";
+
+let questions = [];
+let currentQuestion = 0;
+let answers = [];
+
+let timeLeft = TEST_TIME;
+let timerInterval = null;
+
+let testFinished = false;
+
+
+/* =========================================================
+   START TEST
+========================================================= */
+
+function startTest() {
+
+  studentName =
+    document.getElementById("studentName").value.trim();
+
+  studentClass =
+    document.getElementById("studentClass").value;
+
+  subjectTitle =
+    document.getElementById("subjectSelect").value;
+
+  const error =
+    document.getElementById("formError");
+
+
+  if (!studentName || !studentClass || !subjectTitle) {
+
+    error.classList.remove("hidden");
+
+    return;
+  }
+
+
+  error.classList.add("hidden");
+
+
+  questions =
+    questionBank[subjectTitle] || [];
+
+
+  if (questions.length === 0) {
+
+    alert("Бұл пән бойынша сұрақтар енгізілмеген.");
+
+    return;
+  }
+
+
+  answers =
+    new Array(questions.length).fill(null);
+
+
+  currentQuestion = 0;
+
+
+  document
+    .getElementById("studentModal")
+    .classList.add("hidden");
+
+
+  document
+    .getElementById("app")
+    .classList.remove("hidden");
+
+
+  document
+    .getElementById("headerStudent")
+    .textContent = studentName;
+
+
+  document
+    .getElementById("headerClass")
+    .textContent = studentClass;
+
+
+  document
+    .getElementById("headerSubject")
+    .textContent =
+      subjectTitle + " · 10 сұрақ";
+
+
+  document
+    .getElementById("infoSubject")
+    .textContent = subjectTitle;
+
+
+  document
+    .getElementById("totalQuestions")
+    .textContent = questions.length;
+
+
+  document
+    .getElementById("answeredTotal")
+    .textContent = questions.length;
+
+
+  createQuestionMap();
+
+  showQuestion();
+
+  startTimer();
+}
+
+
+/* =========================================================
+   TIMER
+========================================================= */
+
+function startTimer() {
+
+  timeLeft = TEST_TIME;
+
+  updateTimer();
+
+  clearInterval(timerInterval);
+
+
+  timerInterval = setInterval(() => {
+
+    timeLeft--;
+
+    updateTimer();
+
+
+    if (timeLeft <= 0) {
+
+      clearInterval(timerInterval);
+
+      finishTest(true);
+    }
+
+  }, 1000);
+}
+
+
+function updateTimer() {
+
+  const minutes =
+    Math.floor(timeLeft / 60);
+
+  const seconds =
+    timeLeft % 60;
+
+
+  document.getElementById("timer")
+    .textContent =
+      String(minutes).padStart(2, "0")
+      + ":" +
+      String(seconds).padStart(2, "0");
+
+
+  const timerBox =
+    document.getElementById("timerBox");
+
+
+  if (timeLeft <= 60) {
+
+    timerBox.classList.add("timer-warning");
+    timerBox.classList.remove(
+      "bg-indigo-50",
+      "text-indigo-700"
+    );
+
+  } else {
+
+    timerBox.classList.remove("timer-warning");
+
+  }
+}
+
+
+/* =========================================================
+   QUESTION
+========================================================= */
+
+function showQuestion() {
+
+  const q = questions[currentQuestion];
+
+
+  document.getElementById("currentQuestionNumber")
+    .textContent =
+      currentQuestion + 1;
+
+
+  document.getElementById("questionBadge")
+    .textContent =
+      `${currentQuestion + 1}-сұрақ`;
+
+
+  document.getElementById("questionText")
+    .textContent =
+      q.question;
+
+
+  const answersContainer =
+    document.getElementById("answers");
+
+
+  answersContainer.innerHTML = "";
+
+
+  const letters = ["A", "B", "C", "D"];
+
+
+  q.answers.forEach((answer, index) => {
+
+    const button =
+      document.createElement("button");
+
+
+    button.className =
+      "answer-card w-full text-left p-4 md:p-5 rounded-2xl " +
+      "border-2 border-slate-100 bg-white " +
+      "flex items-center gap-4";
+
+
+    if (answers[currentQuestion] === index) {
+
+      button.classList.add("selected");
+
+    }
+
+
+    button.innerHTML = `
+
+      <span class="
+        flex-shrink-0
+        w-10 h-10
+        rounded-xl
+        bg-slate-100
+        flex items-center justify-center
+        font-black text-slate-600
+      ">
+        ${letters[index]}
+      </span>
+
+      <span class="font-semibold text-slate-700">
+        ${answer}
+      </span>
+
+    `;
+
+
+    button.onclick = () =>
+      selectAnswer(index);
+
+
+    answersContainer.appendChild(button);
+
+  });
+
+
+  updateNavigation();
+
+  updateProgress();
+
+  updateQuestionMap();
+}
+
+
+/* =========================================================
+   SELECT ANSWER
+========================================================= */
+
+function selectAnswer(index) {
+
+  answers[currentQuestion] = index;
+
+  showQuestion();
+}
+
+
+/* =========================================================
+   NAVIGATION
+========================================================= */
+
+function nextQuestion() {
+
+  if (currentQuestion < questions.length - 1) {
+
+    currentQuestion++;
+
+    showQuestion();
+
+  } else {
+
+    finishTest(false);
+
+  }
+}
+
+
+function previousQuestion() {
+
+  if (currentQuestion > 0) {
+
+    currentQuestion--;
+
+    showQuestion();
+
+  }
+}
+
+
+function updateNavigation() {
+
+  const prev =
+    document.getElementById("prevBtn");
+
+  const next =
+    document.getElementById("nextBtn");
+
+
+  prev.disabled =
+    currentQuestion === 0;
+
+
+  if (currentQuestion === questions.length - 1) {
+
+    next.textContent =
+      "Тестті аяқтау ✓";
+
+  } else {
+
+    next.textContent =
+      "Алға →";
+
+  }
+}
+
+
+/* =========================================================
+   PROGRESS
+========================================================= */
+
+function updateProgress() {
+
+  const answered =
+    answers.filter(
+      answer => answer !== null
+    ).length;
+
+
+  const percentage =
+    Math.round(
+      (answered / questions.length) * 100
+    );
+
+
+  document.getElementById("answeredCount")
+    .textContent = answered;
+
+
+  document.getElementById("progressPercent")
+    .textContent = percentage + "%";
+
+
+  document.getElementById("progressBar")
+    .style.width =
+      percentage + "%";
+}
+
+
+/* =========================================================
+   QUESTION MAP
+========================================================= */
+
+function createQuestionMap() {
+
+  const map =
+    document.getElementById("questionMap");
+
+
+  map.innerHTML = "";
+
+
+  questions.forEach((_, index) => {
+
+    const button =
+      document.createElement("button");
+
+
+    button.className =
+      "h-10 rounded-xl font-black text-sm " +
+      "bg-slate-100 text-slate-500 " +
+      "hover:bg-indigo-100 transition";
+
+
+    button.textContent =
+      index + 1;
+
+
+    button.onclick = () => {
+
+      currentQuestion = index;
+
+      showQuestion();
+
+    };
+
+
+    map.appendChild(button);
+
+  });
+}
+
+
+function updateQuestionMap() {
+
+  const buttons =
+    document
+      .getElementById("questionMap")
+      .querySelectorAll("button");
+
+
+  buttons.forEach((button, index) => {
+
+    button.className =
+      "h-10 rounded-xl font-black text-sm transition";
+
+
+    if (index === currentQuestion) {
+
+      button.classList.add(
+        "bg-indigo-600",
+        "text-white"
+      );
+
+    } else if (answers[index] !== null) {
+
+      button.classList.add(
+        "bg-emerald-100",
+        "text-emerald-700"
+      );
+
+    } else {
+
+      button.classList.add(
+        "bg-slate-100",
+        "text-slate-500"
+      );
+
+    }
+
+  });
+}
+
+
+/* =========================================================
+   FINISH TEST
+========================================================= */
+
+function finishTest(autoFinish = false) {
+
+  if (testFinished) return;
+
+  testFinished = true;
+
+
+  clearInterval(timerInterval);
+
+
+  let score = 0;
+
+
+  questions.forEach((question, index) => {
+
+    if (
+      answers[index] === question.correct
+    ) {
+
+      score++;
+
+    }
+
+  });
+
+
+  const total =
+    questions.length;
+
+
+  const percentage =
+    Math.round(
+      (score / total) * 100
+    );
+
+
+  showResult(
+    score,
+    total,
+    percentage,
+    autoFinish
+  );
+
+
+  sendResultToGoogle(
+    score,
+    total,
+    percentage
+  );
+}
+
+
+/* =========================================================
+   RESULT
+========================================================= */
+
+function showResult(
+  score,
+  total,
+  percentage,
+  autoFinish
+) {
+
+  document
+    .getElementById("app")
+    .classList.add("hidden");
+
+
+  document
+    .getElementById("resultScreen")
+    .classList.remove("hidden");
+
+
+  let emoji = "🎉";
+
+
+  if (percentage >= 90) {
+
+    emoji = "🏆";
+
+  } else if (percentage >= 70) {
+
+    emoji = "😃";
+
+  } else if (percentage >= 50) {
+
+    emoji = "🙂";
+
+  } else {
+
+    emoji = "💪";
+
+  }
+
+
+  document
+    .getElementById("resultEmoji")
+    .textContent = emoji;
+
+
+  document
+    .getElementById("resultStudent")
+    .textContent =
+      `${studentName} · ${studentClass} · ${subjectTitle}`;
+
+
+  document
+    .getElementById("resultScore")
+    .textContent =
+      `${score} / ${total}`;
+
+
+  document
+    .getElementById("resultPercentage")
+    .textContent =
+      `${percentage}%`;
+
+
+  document
+    .getElementById("correctAnswers")
+    .textContent =
+      score;
+
+
+  document
+    .getElementById("wrongAnswers")
+    .textContent =
+      total - score;
+
+
+  document
+    .getElementById("resultPercent2")
+    .textContent =
+      `${percentage}%`;
+
+
+  if (autoFinish) {
+
+    document
+      .getElementById("sendStatus")
+      .innerHTML =
+        "⏰ Уақыт аяқталды. Нәтиже автоматты түрде есептелді.";
+
+  }
+}
+
+
+/* =========================================================
+   GOOGLE APPS SCRIPT POST
+========================================================= */
+
+async function sendResultToGoogle(
+  score,
+  total,
+  percentage
+) {
+
+  const status =
+    document.getElementById("sendStatus");
+
+
+  /*
+    Егер URL әлі ауыстырылмаған болса,
+    нақты сұраныс жіберілмейді.
+  */
+
+  if (
+    !GOOGLE_SCRIPT_URL ||
+    GOOGLE_SCRIPT_URL.includes(
+      "СІЗДІҢ_1_ҚАДАМДА"
+    )
+  ) {
+
+    status.className =
+      "mt-7 rounded-2xl p-4 " +
+      "bg-amber-50 text-amber-700";
+
+
+    status.innerHTML =
+      "⚠️ Google Apps Script URL енгізілмеген. " +
+      "Нәтиже браузерде көрсетілді.";
+
+    return;
+  }
+
+
+  const data = {
+
+    date:
+      new Date().toISOString(),
+
+    studentName:
+      studentName,
+
+    studentClass:
+      studentClass,
+
+    subjectTitle:
+      subjectTitle,
+
+    score:
+      score,
+
+    total:
+      total,
+
+    percentage:
+      percentage
+
+  };
+
+
+  try {
+
+    /*
+      Google Apps Script Web App-ке
+      POST сұранысы.
+
+      mode: "no-cors" қолданылғандықтан,
+      браузер жауаптың мазмұнын оқымайды.
+      Бірақ сұраныс Apps Script-ке жіберіледі.
+    */
+
+    await fetch(
+      GOOGLE_SCRIPT_URL,
+      {
+        method: "POST",
+
+        mode: "no-cors",
+
+        headers: {
+          "Content-Type":
+            "text/plain;charset=utf-8"
+        },
+
+        body:
+          JSON.stringify(data)
+      }
+    );
+
+
+    status.className =
+      "mt-7 rounded-2xl p-4 " +
+      "bg-emerald-50 text-emerald-700";
+
+
+    status.innerHTML =
+      "✅ Нәтиже Google Sheets жүйесіне жіберілді!";
+
+
+  } catch (error) {
+
+    console.error(
+      "Google Apps Script error:",
+      error
+    );
+
+
+    status.className =
+      "mt-7 rounded-2xl p-4 " +
+      "bg-red-50 text-red-700";
+
+
+    status.innerHTML =
+      "❌ Нәтижені жіберу кезінде қате орын алды.";
+
+  }
+
+}
+
+
+/* =========================================================
+   БЕТТІ ЖАБУҒА ӘРЕКЕТ БОЛСА
+========================================================= */
+
+window.addEventListener(
+  "beforeunload",
+  function(event) {
+
+    if (
+      !testFinished &&
+      !document
+        .getElementById("app")
+        .classList.contains("hidden")
+    ) {
+
+      event.preventDefault();
+
+      event.returnValue = "";
+
+    }
+
+  }
+);
+
+</script>
+
+</body>
+</html>
